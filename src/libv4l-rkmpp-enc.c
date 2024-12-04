@@ -271,7 +271,7 @@ static void *encoder_thread_fn(void *data)
 
 	while (1) {
 		pthread_mutex_lock(&ctx->worker_mutex);
-
+        LOGV(1, "worker_mutex\n");
 		while (!ctx->mpp_streaming)
 			pthread_cond_wait(&ctx->worker_cond,
 					  &ctx->worker_mutex);
@@ -279,14 +279,14 @@ static void *encoder_thread_fn(void *data)
 		/* Store header before 1st frame */
 		if (enc->needs_header && !enc->header)
 			enc->header = rkmpp_get_header(enc);
-
+        LOGV(1, "get header success\n");
 		/* Wait for buffers */
 		while (ctx->pausing ||
 		       TAILQ_EMPTY(&ctx->capture.pending_buffers) ||
 		       TAILQ_EMPTY(&ctx->output.pending_buffers))
 			pthread_cond_wait(&ctx->worker_cond,
 					  &ctx->worker_mutex);
-
+        LOGV(1, "wait for buffers success\n");
 		if (enc->type == H264 && enc->needs_header &&
 		    enc->h264.separate_header) {
 			if (enc->header) {
@@ -302,25 +302,26 @@ static void *encoder_thread_fn(void *data)
 			pthread_mutex_unlock(&ctx->worker_mutex);
 			continue;
 		}
-
+        LOGV(1, "put frame success\n");
 		packet = NULL;
 		while (!packet) {
 			ret = ctx->mpi->encode_get_packet(ctx->mpp, &packet);
+			LOGV(2, "get packet: %d\n", ret);
 			if (ret != MPP_OK) {
 				LOGE("failed to get packet\n");
 				goto next;
 			}
 		}
-
+        
 		ctx->mpp_produced = true;
 
 		pthread_mutex_unlock(&ctx->worker_mutex);
-
+        LOGV(1, "worker_mutex unlock\n");
 		pthread_mutex_lock(&ctx->ioctl_mutex);
 
 		if (!ctx->mpp_streaming || !ctx->mpp_produced)
 			goto next_locked;
-
+        LOGV(1, "ctx->mpp_streaming success\n");
 		pthread_mutex_lock(&ctx->capture.queue_mutex);
 		rkmpp_buffer = TAILQ_FIRST(&ctx->capture.pending_buffers);
 		TAILQ_REMOVE(&ctx->capture.pending_buffers,
@@ -329,16 +330,16 @@ static void *encoder_thread_fn(void *data)
 		pthread_mutex_unlock(&ctx->capture.queue_mutex);
 
 		rkmpp_buffer->bytesused = 0;
-
+        LOGV(1, "rkmpp_buffer->bytesused = 0\n");
 		if (enc->type == H264 && enc->needs_header &&
 		    !enc->h264.separate_header) {
 			/* Join the header to the 1st frame */
 			rkmpp_packet_to_buffer(enc->header, rkmpp_buffer);
 			enc->needs_header = false;
 		}
-
+        
 		rkmpp_packet_to_buffer(packet, rkmpp_buffer);
-
+        LOGV(1, "rkmpp_packet_to_buffer success\n");
 		meta = mpp_packet_get_meta(packet);
 		if (meta) {
 			mpp_meta_get_s32(meta, KEY_OUTPUT_INTRA, &is_keyframe);
@@ -367,7 +368,7 @@ static void *encoder_thread_fn(void *data)
 				  frame_buffer, entry);
 		rkmpp_buffer_set_available(frame_buffer);
 		pthread_mutex_unlock(&ctx->output.queue_mutex);
-
+        LOGV(1, "return frame success\n");
 		/* Report new frame to count fps */
 		rkmpp_new_frame(ctx);
 
@@ -888,8 +889,11 @@ static int rkmpp_enc_querymenu(struct rkmpp_enc_context *enc,
 	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
 		switch (query_menu->index) {
 		case V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE:
+		case V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_BASELINE:
 		case V4L2_MPEG_VIDEO_H264_PROFILE_MAIN:
 		case V4L2_MPEG_VIDEO_H264_PROFILE_HIGH:
+		case V4L2_MPEG_VIDEO_H264_PROFILE_EXTENDED:
+		    LOGV(1, "H264 profile: %x\n", query_menu->index);
 			break;
 		default:
 			LOGV(1, "unsupported H264 profile: %x\n",

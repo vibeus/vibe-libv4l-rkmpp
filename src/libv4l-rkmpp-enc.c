@@ -38,6 +38,59 @@ enum v4l2_mpeg_video_bitrate_mode {
 
 static struct rkmpp_fmt rkmpp_enc_fmts[] = {
 	{
+		.name = "VP8",
+		.fourcc = V4L2_PIX_FMT_VP8,
+		.num_planes = 1,
+		.type = MPP_VIDEO_CodingVP8,
+		.format = MPP_FMT_BUTT,
+		.frmsize = {
+			.min_width = 96,
+			.max_width = 3840,
+			.step_width = RKMPP_MB_DIM,
+			.min_height = 96,
+			.max_height = 2160,
+			.step_height = RKMPP_MB_DIM,
+		},
+	},
+	{
+		.name = "H.264",
+		.fourcc = V4L2_PIX_FMT_H264,
+		.num_planes = 1,
+		.type = MPP_VIDEO_CodingAVC,
+		.format = MPP_FMT_BUTT,
+		.frmsize = {
+			.min_width = 96,
+			.max_width = 3840,
+			.step_width = RKMPP_MB_DIM,
+			.min_height = 96,
+			.max_height = 2160,
+			.step_height = RKMPP_MB_DIM,
+		},
+	},
+	{
+		.name = "H.265",
+		.fourcc = V4L2_PIX_FMT_HEVC,
+		.num_planes = 1,
+		.type = MPP_VIDEO_CodingHEVC,
+		.format = MPP_FMT_BUTT,
+		.frmsize = {
+			.min_width = 96,
+			.max_width = 3840,
+			.step_width = RKMPP_MB_DIM,
+			.min_height = 96,
+			.max_height = 2160,
+			.step_height = RKMPP_MB_DIM,
+		},
+	},
+	{
+		.name = "4:2:0 1 plane Y/CbCr",
+		.fourcc = V4L2_PIX_FMT_NV12,
+		.num_planes = 1,
+		.type = MPP_VIDEO_CodingNone,
+		.format = MPP_FMT_YUV420SP,
+		.depth = { 12 },
+	},
+	{
 		.name = "4:2:0 3 plane Y/Cb/Cr",
 		.fourcc = V4L2_PIX_FMT_YUV420M,
 		.num_planes = 3,
@@ -69,36 +122,7 @@ static struct rkmpp_fmt rkmpp_enc_fmts[] = {
 		.format = MPP_FMT_YUV422_UYVY,
 		.depth = { 16 },
 	},
-	{
-		.name = "H.264",
-		.fourcc = V4L2_PIX_FMT_H264,
-		.num_planes = 1,
-		.type = MPP_VIDEO_CodingAVC,
-		.format = MPP_FMT_BUTT,
-		.frmsize = {
-			.min_width = 96,
-			.max_width = 1920,
-			.step_width = RKMPP_MB_DIM,
-			.min_height = 96,
-			.max_height = 1088,
-			.step_height = RKMPP_MB_DIM,
-		},
-	},
-	{
-		.name = "VP8",
-		.fourcc = V4L2_PIX_FMT_VP8,
-		.num_planes = 1,
-		.type = MPP_VIDEO_CodingVP8,
-		.format = MPP_FMT_BUTT,
-		.frmsize = {
-			.min_width = 96,
-			.max_width = 1920,
-			.step_width = RKMPP_MB_DIM,
-			.min_height = 96,
-			.max_height = 1088,
-			.step_height = RKMPP_MB_DIM,
-		},
-	},
+	
 };
 
 static int rkmpp_enc_apply_rc_cfg(struct rkmpp_enc_context *enc);
@@ -855,6 +879,9 @@ static int rkmpp_enc_queryctrl(struct rkmpp_enc_context *enc,
 		query_ctrl->minimum = V4L2_MPEG_VIDEO_VP8_PROFILE_0;
 		query_ctrl->maximum = query_ctrl->minimum;
 		break;
+	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
+		query_ctrl->minimum = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
+		query_ctrl->maximum = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_STILL_PICTURE;
 		/* TODO: fill info for other supported ctrls */
 	default:
 		LOGV(1, "unsupported ctrl: %x\n", query_ctrl->id);
@@ -900,6 +927,13 @@ static int rkmpp_enc_querymenu(struct rkmpp_enc_context *enc,
 	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
 		if (query_menu->index != V4L2_MPEG_VIDEO_VP8_PROFILE_0) {
 			LOGV(1, "unsupported VP8 profile: %x\n",
+			     query_menu->index);
+			RETURN_ERR(EINVAL, -1);
+		}
+		break;
+	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
+		if (query_menu->index != V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN) {
+			LOGV(1, "unsupported HEVC profile: %x\n",
 			     query_menu->index);
 			RETURN_ERR(EINVAL, -1);
 		}

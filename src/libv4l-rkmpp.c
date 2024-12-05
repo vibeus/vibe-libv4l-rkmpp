@@ -944,7 +944,7 @@ static void *plugin_init(int fd)
 	if (ctx->is_decoder) {
 		if (ctx->codecs)
 			free(ctx->codecs);
-		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1");
+		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1:JPEG");
 	}else{
 		if (ctx->codecs)
 			free(ctx->codecs);

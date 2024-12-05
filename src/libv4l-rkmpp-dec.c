@@ -98,10 +98,25 @@ static struct rkmpp_fmt rkmpp_dec_fmts[] = {
 			.max_width = 3840,
 			.step_width = RKMPP_SB_DIM,
 			.min_height = 48,
-			.max_height = 2176,
+			.max_height = 2160,
 			.step_height = RKMPP_SB_DIM,
 		},
 	},
+	{
+     .name = "JPEG",
+     .fourcc = V4L2_PIX_FMT_JPEG,
+     .num_planes = 1,
+     .type = MPP_VIDEO_CodingMJPEG,
+     .format = MPP_FMT_BUTT,
+ 		.frmsize = {
+       .min_width = 48,
+       .max_width = 3840,
+       .step_width = RKMPP_SB_DIM,
+       .min_height = 48,
+       .max_height = 2160,
+       .step_height = RKMPP_SB_DIM,
+     },
+   },
 };
 
 /* Feed all available packets to mpp */

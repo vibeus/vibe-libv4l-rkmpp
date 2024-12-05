@@ -941,6 +941,16 @@ static void *plugin_init(int fd)
 		goto err_free_ctx;
 	}
 
+	if (ctx->is_decoder) {
+		if (ctx->codecs)
+			free(ctx->codecs);
+		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1");
+	}else{
+		if (ctx->codecs)
+			free(ctx->codecs);
+		ctx->codecs = strdup("VP8:H.264:H.265");
+	}
+
 	/* Create eventfd to fake poll events */
 	ctx->eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 	if (ctx->eventfd < 0) {

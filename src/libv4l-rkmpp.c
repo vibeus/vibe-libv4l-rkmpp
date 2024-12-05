@@ -921,17 +921,10 @@ static void *plugin_init(int fd)
 		calloc(1, sizeof(struct rkmpp_context));
 	if (!ctx)
 		RETURN_ERR(ENOMEM, NULL);
-    rkmpp_log_level = 4;
-	if (rkmpp_parse_options(ctx, fd) < 0){
-		LOGV(1, "failed to parse option\n");
-		goto err_free_ctx;
-	}
-	rkmpp_log_level = 4;
-    // ctx->is_decoder = false;
-	// rkmpp_log_fps = true;
-	// ctx->max_width = 3840;
-	// ctx->max_height = 2160;
-	// ctx->codecs = strdup("H.264");
+	// if (rkmpp_parse_options(ctx, fd) < 0){
+	// 	LOGV(1, "failed to parse option\n");
+	// 	goto err_free_ctx;
+	// }
 
 	/* Create eventfd to fake poll events */
 	ctx->eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);

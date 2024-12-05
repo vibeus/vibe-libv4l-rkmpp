@@ -64,13 +64,11 @@ extern int rkmpp_log_level;
 
 #define gettid() syscall(SYS_gettid)
 
+__attribute__((format(printf, 5, 6))) void log_prefix(const char *prefix, const char *func,
+  int line, int code, const char *format, ...);
+ 
 #define LOG(fmt, ...) do { \
-	struct timeval tv; \
-	gettimeofday(&tv, NULL); \
-	printf("[%03ld.%03ld] [RKMPP] [%ld] %s(%d): " fmt, \
-	       tv.tv_sec % 1000, tv.tv_usec / 1000, gettid(), \
-	       __func__, __LINE__, ##__VA_ARGS__); \
-	fflush(stdout); \
+	log_prefix("RKMPP", __func__, __LINE__, errno, fmt, ##__VA_ARGS__); \
 	} while (0)
 
 #define LOGV(level, fmt, ...) \

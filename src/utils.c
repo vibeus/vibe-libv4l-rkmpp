@@ -245,9 +245,12 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
 }
 
 void log_prefix(const char *prefix, const char *func,
-  int line, const char *format, ...) {
+  int line, int code, const char *format, ...)  {
   char buf[50];
-  snprintf(buf, sizeof(buf), "[%s:%s(%d)]", prefix, func, line);
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  snprintf(buf, sizeof(buf), "[%03ld.%03ld] [%s] [%s:%d] %d: ",
+	tv.tv_sec % 1000, tv.tv_usec / 1000, prefix, func, line, code);
   va_list args;
   va_start(args, format);
   fprintf(stderr, "%s ", buf);

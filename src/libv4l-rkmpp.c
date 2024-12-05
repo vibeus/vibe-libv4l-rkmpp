@@ -33,8 +33,8 @@
 #define FPS_UPDATE_INTERVAL 120
 
 #ifdef DEBUG
-int rkmpp_log_level = 10;
-static bool rkmpp_log_fps = true;
+int rkmpp_log_level = 5;
+static bool rkmpp_log_fps = false;
 #else
 int rkmpp_log_level = 0;
 static bool rkmpp_log_fps = false;
@@ -673,7 +673,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ctx, struct v4l2_buffer *buffer)
 
 	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
 	if (ret < 0) {
-		LOGE("failed to convert buffer\n");
+		LOGE("failed to convert buffer, ret:%d\n", ret);
 		RETURN_ERR(EINVAL, -1);
 	}
 
@@ -825,8 +825,11 @@ int rkmpp_update_poll_event(struct rkmpp_context *ctx)
 
 static int rkmpp_parse_options(struct rkmpp_context *ctx, int fd)
 {
-	ENTER();
+  char options[50] = {0};
+  int ret;
 
+	ENTER();
+#if 0
 #define MAX_OPT_LEN 1024
 #define OPT_DEC "dec"
 #define OPT_ENC "enc"
@@ -892,10 +895,21 @@ static int rkmpp_parse_options(struct rkmpp_context *ctx, int fd)
 			RETURN_ERR(ENODEV, -1);
 		}
 	}
+#else
+  ret = read(fd, options, sizeof(options) -1);
+  LOGV(1, "read fd:%s\n", options);
+  if (!ret || !strncmp(options, "dec", 3)) {
+    ctx->is_decoder = true;
+  } else if (!strncmp(options, "enc", 3)) {
+    ctx->is_decoder = false;
+  } else {
+    LOGV(1, "unknown options\n");
+    RETURN_ERR(ENODEV, -1);
+  }
+#endif
 
 	if (fcntl(fd, F_GETFL) & O_NONBLOCK)
 		ctx->nonblock = true;
-
 	LEAVE();
 	return 0;
 }
@@ -912,7 +926,7 @@ static void *plugin_init(int fd)
 	ENTER();
 
 	/* Filter out invalid fd and real devices */
-	if (fstat(fd, &stat) < 0 || S_ISCHR(stat.st_mode))
+	if (fstat(fd, &stat) < 0)
 		RETURN_ERR(errno, NULL);
 
 	pthread_once(&g_rkmpp_global_init_once, rkmpp_global_init);

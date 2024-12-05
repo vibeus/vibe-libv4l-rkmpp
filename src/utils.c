@@ -13,6 +13,7 @@
  */
 
 #include <sys/mman.h>
+#include <stdarg.h>
 
 #include "libv4l-rkmpp.h"
 
@@ -26,6 +27,7 @@ static int rkmpp_copy_buffer(struct rkmpp_context *ctx,
 	uint32_t sizes[3], offsets[3];
 	unsigned int i;
 	int ret = -1;
+  int err = 0;
 
 	ENTER();
 
@@ -49,21 +51,27 @@ static int rkmpp_copy_buffer(struct rkmpp_context *ctx,
 		sizes[i] = rkmpp_buffer->planes[i].plane_size;
 		offsets[i] = rkmpp_buffer->planes[i].data_offset;
 
-		if (!sizes[i])
+		if (!sizes[i]) {
+            LOGV(3, "index:%d,planes[%u].size :%u, offset:%u, buffer->length:%u, bytesused:%u\n", rkmpp_buffer->index, i, sizes[i], offsets[i], buffer->length, rkmpp_buffer->planes[i].bytesused);
 			goto out;
-
+    }
 		if (buffer->memory == V4L2_MEMORY_DMABUF) {
 			int fd = rkmpp_buffer->planes[i].fd;
 			addrs[i] = mmap(NULL, sizes[i],
 					PROT_READ | PROT_WRITE,
 					MAP_SHARED, fd, offsets[i]);
-			if (addrs[i] == MAP_FAILED)
+      err = errno;
+			if (addrs[i] == MAP_FAILED) {
+                LOGV(3, "mmap failed: i:%u, fd:%d, size:%u, offsets:%u, errno:%d, sizeimage:%u, planes[0].length:%u\n", i, fd, sizes[i], offsets[i], err, rkmpp_buffer->size,
+                     rkmpp_buffer->planes[0].length);
 				goto out;
+      }
 		} else {
 			addrs[i] = (void *)rkmpp_buffer->planes[i].userptr;
-			if (!addrs[i])
+			if (!addrs[i]) {
+                LOGV(3, "planes[%u]->userptr:%lu is 0\n", i, rkmpp_buffer->planes[i].userptr);
 				goto out;
-
+      }
 			addrs[i] += offsets[i];
 		}
 
@@ -148,6 +156,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
 	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
 		/* Returning data are always in plane 0 */
 		rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
+		if (!rkmpp_buffer->planes[0].plane_size)
+			rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
 		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
 
 		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0)
@@ -232,4 +242,15 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
 
 	LEAVE();
 	return 0;
+}
+
+void log_prefix(const char *prefix, const char *func,
+  int line, const char *format, ...) {
+  char buf[50];
+  snprintf(buf, sizeof(buf), "[%s:%s(%d)]", prefix, func, line);
+  va_list args;
+  va_start(args, format);
+  fprintf(stderr, "%s ", buf);
+  vfprintf(stderr, format, args);
+  va_end(args);
 }

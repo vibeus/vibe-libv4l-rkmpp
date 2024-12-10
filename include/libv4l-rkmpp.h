@@ -478,9 +478,13 @@ void rkmpp_finish_flushing(struct rkmpp_context *ctx,
 
 int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
 			 struct rkmpp_buffer *rkmpp_buffer,
-			 struct v4l2_buffer *buffer);
+			 struct v4l2_buffer *buffer, 
+			 bool output);
 int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
-			   struct v4l2_buffer *buffer,
-			   struct rkmpp_buffer *rkmpp_buffer);
-
+				struct v4l2_buffer *buffer,
+				struct rkmpp_buffer *rkmpp_buffer, 
+				bool input);
+uint32_t mpp_format_to_v4l_format(MppFrameFormat fmt);
+void dump_rkmpp_format(const struct rkmpp_fmt *fmt, const char *prefix);
+void dump_v4l2_fmtdesc(const struct v4l2_fmtdesc *f);
 #endif //LIBV4L_RKMPP_H

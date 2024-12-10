@@ -564,6 +564,8 @@ static int rkmpp_dec_streamon(struct rkmpp_dec_context *dec,
 		goto out;
 
 	LOGV(1, "mpp initializing\n");
+	dump_rkmpp_format(ctx->capture.rkmpp_format, "decoder capture");
+    dump_rkmpp_format(ctx->output.rkmpp_format, "decoder output");
 
 	ret = mpp_create(&ctx->mpp, &ctx->mpi);
 	if (ret != MPP_OK) {

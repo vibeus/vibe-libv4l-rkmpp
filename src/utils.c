@@ -14,6 +14,7 @@
 
 #include <sys/mman.h>
 #include <stdarg.h>
+#include <fcntl.h>
 
 #include "libv4l-rkmpp.h"
 
@@ -123,7 +124,7 @@ out:
 
 int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
 			 struct rkmpp_buffer *rkmpp_buffer,
-			 struct v4l2_buffer *buffer)
+			 struct v4l2_buffer *buffer, bool output)
 {
 	unsigned int i;
 
@@ -152,6 +153,10 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
 			buffer->m.planes[i].m.fd =
 				rkmpp_buffer->planes[i].fd;
 	}
+	if (output)
+       LOGV(3, "deque output buffer, length:%d, fd(0):%d \n", buffer->length, rkmpp_buffer->planes[0].fd);
+	else
+	  LOGV(3, "deque input buffer, length:%d, fd(0):%d \n", buffer->length, rkmpp_buffer->planes[0].fd);
 
 	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
 		/* Returning data are always in plane 0 */
@@ -160,7 +165,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
 			rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
 		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
 
-		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0)
+		if (output && (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0))
 			return -1;
 	}
 
@@ -194,7 +199,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
 
 int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
 			   struct v4l2_buffer *buffer,
-			   struct rkmpp_buffer *rkmpp_buffer)
+			   struct rkmpp_buffer *rkmpp_buffer,
+			   bool input)
 {
 	unsigned int i;
 
@@ -223,7 +229,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
 				buffer->m.planes[i].m.fd;
 	}
 
-	if (rkmpp_buffer->bytesused) {
+	if (rkmpp_buffer->bytesused && input) {
 		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 0) < 0)
 			return -1;
 	}
@@ -239,7 +245,11 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
 		rkmpp_buffer_clr_error(rkmpp_buffer);
 	if (rkmpp_buffer_last(rkmpp_buffer))
 		rkmpp_buffer_clr_last(rkmpp_buffer);
-
+    
+	if (!input)
+      LOGV(2, "enque output buffer, length:%d, fd(0):%d, status:0x%x\n", buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
+	else
+	  LOGV(2, "enque input buffer, length:%d, fd(0):%d\n", buffer->length, buffer->m.planes[0].m.fd);
 	LEAVE();
 	return 0;
 }
@@ -249,7 +259,7 @@ void log_prefix(const char *prefix, const char *func,
   char buf[50];
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  snprintf(buf, sizeof(buf), "[%03ld.%03ld] [%s] [%s:%d] %d: ",
+  snprintf(buf, sizeof(buf), "[%03ld.%03ld] [%s] [%s:%d] [err:%d]: ",
 	tv.tv_sec % 1000, tv.tv_usec / 1000, prefix, func, line, code);
   va_list args;
   va_start(args, format);
@@ -257,3 +267,42 @@ void log_prefix(const char *prefix, const char *func,
   vfprintf(stderr, format, args);
   va_end(args);
 }
+
+uint32_t mpp_format_to_v4l_format(MppFrameFormat fmt) {
+  switch(fmt & MPP_FRAME_FMT_MASK) {
+    case MPP_FMT_YUV420P:
+      return V4L2_PIX_FMT_YUV420;
+    case MPP_FMT_YUV420SP_VU:
+      return V4L2_PIX_FMT_NV21;
+    case MPP_FMT_YUV422P:
+      return V4L2_PIX_FMT_YUV422P;
+    case MPP_FMT_YUV422_YUYV:
+      return V4L2_PIX_FMT_YUYV;
+    default:
+      return V4L2_PIX_FMT_NV12;
+  }
+}
+
+void dump_rkmpp_format(const struct rkmpp_fmt *fmt, const char *prefix)
+{   
+	LOGV(2, "%s\n", prefix);
+	LOGV(2, "name: %s\n", fmt->name);
+	LOGV(2, "fourcc: %08x\n", fmt->fourcc);
+	LOGV(2, "num_planes: %d\n", fmt->num_planes);
+	LOGV(2, "type: %d\n", fmt->type);
+	LOGV(2, "format: %d\n", fmt->format);
+	LOGV(2, "depth: %d %d %d\n", fmt->depth[0], fmt->depth[1], fmt->depth[2]);
+	LOGV(2, "frmsize: %dx%d %dx%d %dx%d\n",
+	     fmt->frmsize.min_width, fmt->frmsize.max_width,
+	     fmt->frmsize.min_height, fmt->frmsize.max_height,
+	     fmt->frmsize.step_width, fmt->frmsize.step_height);
+}
+
+void dump_v4l2_fmtdesc(const struct v4l2_fmtdesc *f) {
+	LOGV(3, "index: %d\n", f->index);
+	LOGV(3, "type: %d\n", f->type);
+	LOGV(3, "flags: %d\n", f->flags);
+	LOGV(3, "description: %s\n", f->description);
+	LOGV(3, "pixelformat: %08x\n", f->pixelformat);
+	LOGV(3, "reserved: %08x %08x %08x\n", f->reserved[0], f->reserved[1], f->reserved[2]);
+};

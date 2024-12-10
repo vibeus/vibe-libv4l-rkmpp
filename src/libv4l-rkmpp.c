@@ -33,7 +33,9 @@
 #define FPS_UPDATE_INTERVAL 120
 
 #ifdef DEBUG
-int rkmpp_log_level = 5;
+/*debug log level rang 1~5, 1 is the lowest level, 
+*5 is the highest level*/
+int rkmpp_log_level = 4;
 static bool rkmpp_log_fps = false;
 #else
 int rkmpp_log_level = 0;
@@ -234,7 +236,6 @@ int rkmpp_enum_fmt(struct rkmpp_context *ctx, struct v4l2_fmtdesc *f)
 			f->flags = 0;
 			if (fmt->type != MPP_VIDEO_CodingNone)
 				f->flags |= V4L2_FMT_FLAG_COMPRESSED;
-
 			LEAVE();
 			return 0;
 		}
@@ -552,7 +553,7 @@ int rkmpp_querybuf(struct rkmpp_context *ctx, struct v4l2_buffer *buffer)
 
 	rkmpp_buffer = &queue->buffers[buffer->index];
 
-	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
+	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	if (ret < 0) {
 		LOGE("failed to convert buffer\n");
 		RETURN_ERR(EINVAL, -1);
@@ -621,7 +622,7 @@ int rkmpp_qbuf(struct rkmpp_context *ctx, struct v4l2_buffer *buffer)
 
 	rkmpp_buffer = &queue->buffers[buffer->index];
 
-	ret = rkmpp_from_v4l2_buffer(ctx, buffer, rkmpp_buffer);
+	ret = rkmpp_from_v4l2_buffer(ctx, buffer, rkmpp_buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
 	if (ret < 0) {
 		LOGE("failed to convert buffer\n");
 		RETURN_ERR(EINVAL, -1);
@@ -671,7 +672,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ctx, struct v4l2_buffer *buffer)
 	rkmpp_buffer = TAILQ_FIRST(&queue->avail_buffers);
 	pthread_mutex_unlock(&queue->queue_mutex);
 
-	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
+	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	if (ret < 0) {
 		LOGE("failed to convert buffer, ret:%d\n", ret);
 		RETURN_ERR(EINVAL, -1);
@@ -818,7 +819,9 @@ int rkmpp_update_poll_event(struct rkmpp_context *ctx)
 		ret = eventfd_write(ctx->eventfd, 1);
 	else
 		ret = eventfd_read(ctx->eventfd, &event);
-
+    
+	LOGV(3, "%s: ret:%d\n", has_event ? "write" : "read", ret);
+    errno = 0;
 	LEAVE();
 	return ret;
 }
@@ -922,7 +925,18 @@ static void *plugin_init(int fd)
 	unsigned int i;
 	int epollfd;
 	MPP_RET ret;
-
+    /* ChromiumOS chrome env paras passig only support captial letter, however 
+	*mpp debug paras are lower case, so we need to convert them to lower case */
+	char *env_mpi = getenv("MPI_DEBUG");
+	char *env_mpp = getenv("MPP_DEBUG");
+	char *env_log = getenv("MPP_LOG_LEVEL");
+	if (env_mpi)
+		mpp_env_set_u32("mpi_debug", atoi(env_mpi));
+	if(env_mpp)
+		mpp_env_set_u32("mpp_debug", atoi(env_mpp));
+	if(env_log)
+		mpp_env_set_u32("mpp_log_level", atoi(env_log));
+	
 	ENTER();
 
 	/* Filter out invalid fd and real devices */
@@ -930,7 +944,7 @@ static void *plugin_init(int fd)
 		RETURN_ERR(errno, NULL);
 
 	pthread_once(&g_rkmpp_global_init_once, rkmpp_global_init);
-
+    LOGV(1,"rkmpp_log_level:%d\n", rkmpp_log_level);
 	ctx = (struct rkmpp_context *)
 		calloc(1, sizeof(struct rkmpp_context));
 	if (!ctx)
@@ -965,7 +979,7 @@ static void *plugin_init(int fd)
 	}
 
 	/* Filter out eventfd's POLLOUT, since it would be always generated */
-	ev.events = EPOLLIN | EPOLLET;
+	ev.events = EPOLLIN | EPOLLET | EPOLLPRI;
 	ev.data.fd = ctx->eventfd;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, ctx->eventfd, &ev) < 0) {
 		LOGE("failed to add eventfd\n");
@@ -1157,7 +1171,8 @@ static void *plugin_mmap(void *dev_ops_priv, void *start,
 	rkmpp_buffer = &queue->buffers[index];
 	ptr = mmap(start, length, prot, flags, rkmpp_buffer->fd, 0);
 
-	LOGV(1, "mmap buffer(%d): %p, fd: %d\n", index, ptr, rkmpp_buffer->fd);
+	if (ptr == MAP_FAILED)
+      LOGV(1, "mmap failed buffer(%d): fd:%d errno:%d\n", index, rkmpp_buffer->fd, errno);
 
 	LEAVE();
 	return ptr;

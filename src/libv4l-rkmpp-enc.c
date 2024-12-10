@@ -664,6 +664,9 @@ static int rkmpp_enc_streamon(struct rkmpp_enc_context *enc,
 {
 	struct rkmpp_context *ctx = enc->ctx;
 	const struct rkmpp_fmt *rkmpp_fmt = ctx->capture.rkmpp_format;
+    dump_rkmpp_format(rkmpp_fmt, "encoder capture");
+	dump_rkmpp_format(ctx->output.rkmpp_format, "encoder output");
+
 	struct rkmpp_buf_queue *queue;
 	MppPollType poll_type;
 	MPP_RET ret;

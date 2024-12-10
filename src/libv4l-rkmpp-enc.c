@@ -1250,7 +1250,7 @@ void *rkmpp_enc_init(struct rkmpp_context *ctx)
 
 	enc->max_qp = enc->min_qp = 0;
 
-	enc->rc_mode = MPP_ENC_RC_MODE_BUTT;
+	enc->rc_mode = MPP_ENC_RC_MODE_AVBR;
 	enc->mb_rc = true;
 	enc->rc_reaction_coeff = 1;
 	enc->gop_size = 30;
@@ -1259,7 +1259,14 @@ void *rkmpp_enc_init(struct rkmpp_context *ctx)
 	enc->bitrate = 0;
 	enc->denominator = 1;
 	enc->numerator = 30;
-
+	int ret = mpp_buffer_group_get_external(&ctx->output.external_group,
+					      MPP_BUFFER_TYPE_DMA_HEAP);
+	if (ret != MPP_OK) {
+		LOGE("failed to create output buffer group\n");
+		free(enc);
+		RETURN_ERR(ENOMEM, NULL);
+	}
+    enc->ctx = ctx;
 	pthread_create(&ctx->worker_thread, NULL, encoder_thread_fn, enc);
 
 	LEAVE();

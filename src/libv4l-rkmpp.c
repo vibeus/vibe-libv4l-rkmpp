@@ -218,7 +218,7 @@ int rkmpp_enum_fmt(struct rkmpp_context *ctx, struct v4l2_fmtdesc *f)
 		LOGE("invalid buf type\n");
 		RETURN_ERR(EINVAL, -1);
 	}
-
+	dump_v4l2_fmtdesc(f);
 	for (i = 0, j = 0; i < ctx->num_formats; ++i) {
 		fmt = &ctx->formats[i];
 		if (!compressed && (fmt->type != MPP_VIDEO_CodingNone))
@@ -236,6 +236,7 @@ int rkmpp_enum_fmt(struct rkmpp_context *ctx, struct v4l2_fmtdesc *f)
 			f->flags = 0;
 			if (fmt->type != MPP_VIDEO_CodingNone)
 				f->flags |= V4L2_FMT_FLAG_COMPRESSED;
+            LOGV(4, "match fmt[%d]: %s, fourcc=%x, type=%d\n", i, fmt->name, fmt->fourcc, fmt->type);
 			LEAVE();
 			return 0;
 		}
@@ -999,7 +1000,7 @@ static void *plugin_init(int fd)
 	pthread_mutex_init(&ctx->worker_mutex, NULL);
 
 	ret = mpp_buffer_group_get_internal(&ctx->output.internal_group,
-					    MPP_BUFFER_TYPE_DRM);
+					    MPP_BUFFER_TYPE_DMA_HEAP);
 	if (ret != MPP_OK) {
 		LOGE("failed to use mpp drm buf group\n");
 		errno = ENODEV;
@@ -1007,7 +1008,7 @@ static void *plugin_init(int fd)
 	}
 
 	ret = mpp_buffer_group_get_internal(&ctx->capture.internal_group,
-					    MPP_BUFFER_TYPE_DRM);
+					    MPP_BUFFER_TYPE_DMA_HEAP);
 	if (ret != MPP_OK) {
 		LOGE("failed to use mpp drm buf group\n");
 		errno = ENODEV;

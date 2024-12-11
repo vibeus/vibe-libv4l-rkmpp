@@ -444,6 +444,9 @@ int rkmpp_reqbufs(struct rkmpp_context *ctx,
 		rkmpp_destroy_buffers(queue);
 		goto out;
 	}
+    
+	LOGV(1, "v4l2 buffer count: %u, type: %u, memory: %u\n",
+	     reqbufs->count, reqbufs->type, reqbufs->memory);
 
 	if (queue->num_buffers)
 		rkmpp_destroy_buffers(queue);

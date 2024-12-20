@@ -1262,9 +1262,8 @@ void *rkmpp_enc_init(struct rkmpp_context *ctx)
 	enc->bitrate = 0;
 	enc->denominator = 1;
 	enc->numerator = 30;
-	
 	int ret = mpp_buffer_group_get_external(&ctx->output.external_group,
-					      MPP_BUFFER_TYPE_DRM);
+					      MPP_BUFFER_TYPE_DMA_HEAP);
 	if (ret != MPP_OK) {
 		LOGE("failed to create output buffer group\n");
 		free(enc);

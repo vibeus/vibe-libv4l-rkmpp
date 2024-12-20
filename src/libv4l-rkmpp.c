@@ -1003,7 +1003,7 @@ static void *plugin_init(int fd)
 	pthread_mutex_init(&ctx->worker_mutex, NULL);
 
 	ret = mpp_buffer_group_get_internal(&ctx->output.internal_group,
-					    MPP_BUFFER_TYPE_DRM);
+					    MPP_BUFFER_TYPE_DMA_HEAP);
 	if (ret != MPP_OK) {
 		LOGE("failed to use mpp drm buf group\n");
 		errno = ENODEV;
@@ -1011,7 +1011,7 @@ static void *plugin_init(int fd)
 	}
 
 	ret = mpp_buffer_group_get_internal(&ctx->capture.internal_group,
-					    MPP_BUFFER_TYPE_DRM);
+					    MPP_BUFFER_TYPE_DMA_HEAP);
 	if (ret != MPP_OK) {
 		LOGE("failed to use mpp drm buf group\n");
 		errno = ENODEV;

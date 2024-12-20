@@ -105,7 +105,7 @@ static struct rkmpp_fmt rkmpp_dec_fmts[] = {
 	{
      .name = "JPEG",
      .fourcc = V4L2_PIX_FMT_JPEG,
-     .num_planes = 1,
+     .num_planes = 8,
      .type = MPP_VIDEO_CodingMJPEG,
      .format = MPP_FMT_BUTT,
  		.frmsize = {
@@ -919,7 +919,7 @@ void *rkmpp_dec_init(struct rkmpp_context *ctx)
 
 	/* Using external buffer mode to limit buffers */
 	ret = mpp_buffer_group_get_external(&ctx->capture.external_group,
-					    MPP_BUFFER_TYPE_DRM);
+					    MPP_BUFFER_TYPE_DMA_HEAP);
 	if (ret != MPP_OK) {
 		LOGE("failed to use mpp ext drm buf group\n");
 		errno = ENODEV;

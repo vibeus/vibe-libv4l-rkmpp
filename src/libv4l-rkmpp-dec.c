@@ -919,7 +919,7 @@ void *rkmpp_dec_init(struct rkmpp_context *ctx)
 
 	/* Using external buffer mode to limit buffers */
 	ret = mpp_buffer_group_get_external(&ctx->capture.external_group,
-					    MPP_BUFFER_TYPE_DMA_HEAP);
+					    MPP_BUFFER_TYPE_DRM);
 	if (ret != MPP_OK) {
 		LOGE("failed to use mpp ext drm buf group\n");
 		errno = ENODEV;

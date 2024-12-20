@@ -179,6 +179,9 @@ static int rkmpp_put_frame(struct rkmpp_enc_context *enc)
 	mpp_frame_set_hor_stride(frame, enc->hstride);
 	mpp_frame_set_ver_stride(frame, enc->vstride);
 	mpp_frame_set_fmt(frame, rkmpp_fmt->format);
+   	LOGV(2, "frame: %dx%d, stride: %dx%d, fmt: %d\n",
+	     enc->width, enc->height, enc->hstride, enc->vstride,
+	     rkmpp_fmt->format);
 
 	mpp_frame_set_buffer(frame, rkmpp_buffer->rkmpp_buf);
 
@@ -215,7 +218,7 @@ static void rkmpp_packet_to_buffer(MppPacket packet,
 	uint32_t src_size = mpp_packet_get_length(packet);
 	uint32_t offset = rkmpp_buffer->bytesused;
 	uint32_t dst_size = rkmpp_buffer->size;
-
+    LOGV(3, "src_size:%d, dst_size:%d, offset:%d\n", src_size, dst_size, offset);
 	if (src_size > dst_size - offset) {
 		LOGE("packet overflow! %d > (%d - %d)\n",
 		     src_size, dst_size, offset);
@@ -979,7 +982,7 @@ static int rkmpp_enc_s_ext_ctrls(struct rkmpp_enc_context *enc,
 
 	for (i = 0; i < ext_ctrls->count; i++) {
 		ctrl = &ext_ctrls->controls[i];
-
+        LOGV(1, "@shawn ctrl: %d, value: %d\n", ctrl->id, ctrl->value);
 		switch (ctrl->id) {
 		case V4L2_CID_MPEG_VIDEO_H264_I_PERIOD:
 			if (ctrl->value) {
@@ -1259,8 +1262,9 @@ void *rkmpp_enc_init(struct rkmpp_context *ctx)
 	enc->bitrate = 0;
 	enc->denominator = 1;
 	enc->numerator = 30;
+	
 	int ret = mpp_buffer_group_get_external(&ctx->output.external_group,
-					      MPP_BUFFER_TYPE_DMA_HEAP);
+					      MPP_BUFFER_TYPE_DRM);
 	if (ret != MPP_OK) {
 		LOGE("failed to create output buffer group\n");
 		free(enc);

@@ -444,6 +444,9 @@ int rkmpp_reqbufs(struct rkmpp_context *ctx,
 		rkmpp_destroy_buffers(queue);
 		goto out;
 	}
+    
+	LOGV(1, "v4l2 buffer count: %u, type: %u, memory: %u\n",
+	     reqbufs->count, reqbufs->type, reqbufs->memory);
 
 	if (queue->num_buffers)
 		rkmpp_destroy_buffers(queue);
@@ -1000,7 +1003,7 @@ static void *plugin_init(int fd)
 	pthread_mutex_init(&ctx->worker_mutex, NULL);
 
 	ret = mpp_buffer_group_get_internal(&ctx->output.internal_group,
-					    MPP_BUFFER_TYPE_DMA_HEAP);
+					    MPP_BUFFER_TYPE_DRM);
 	if (ret != MPP_OK) {
 		LOGE("failed to use mpp drm buf group\n");
 		errno = ENODEV;
@@ -1008,7 +1011,7 @@ static void *plugin_init(int fd)
 	}
 
 	ret = mpp_buffer_group_get_internal(&ctx->capture.internal_group,
-					    MPP_BUFFER_TYPE_DMA_HEAP);
+					    MPP_BUFFER_TYPE_DRM);
 	if (ret != MPP_OK) {
 		LOGE("failed to use mpp drm buf group\n");
 		errno = ENODEV;
